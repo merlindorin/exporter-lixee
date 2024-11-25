@@ -2,12 +2,14 @@
 package internal
 
 import (
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Collector struct {
+	mutex        sync.Mutex
 	state        *LixeeState
 	timeout      time.Duration
 	reportErrors bool
@@ -26,10 +28,21 @@ type Collector struct {
 	warnDPSGauge              *prometheus.Desc
 }
 
+func (c *Collector) State() *LixeeState {
+	return c.state
+}
+
+func (c *Collector) SetState(state *LixeeState) {
+	c.mutex.Lock()
+	*c.state = *state
+	c.mutex.Unlock()
+}
+
 func NewCollector(timeout time.Duration, reportError bool) *Collector {
 	return &Collector{
 		reportErrors: reportError,
 		timeout:      timeout,
+		state:        &LixeeState{},
 
 		infoGauge:                 prometheus.NewDesc("lixee_info", "Lixee info.", []string{"meter_serial_number", "active_register_tier_delivered", "current_tarif", "mot_d_etat"}, nil),
 		apparentPowerGauge:        prometheus.NewDesc("lixee_apparent_power", "Apparent power (W)", []string{"meter_serial_number"}, nil),

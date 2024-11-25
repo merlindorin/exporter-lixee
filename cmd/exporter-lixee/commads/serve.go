@@ -132,9 +132,7 @@ func (s Serve) Run(common *cmd.Commons) error {
 	http.HandleFunc(s.prefixRoute("-", "healthy"), AlwaysHealthy(logger))
 	http.HandleFunc(s.prefixRoute(), StatusPage())
 
-	lixeeState := &internal.LixeeState{}
-
-	http.HandleFunc("/api/v1/lixee", lixeeAPIHandler(lixeeState))
+	http.HandleFunc("/api/v1/lixee", lixeeAPIHandler(collector))
 
 	srv := &http.Server{
 		ReadTimeout:       s.MetricsReadTimeout,
@@ -174,7 +172,7 @@ func (s Serve) Run(common *cmd.Commons) error {
 		zap.String("clientId", s.MQTTClientID),
 		zap.String("topic", s.MQTTTopic),
 	)
-	go lixeeListener(listenerLogger, client, srvc, s, lixeeState)
+	go lixeeListener(listenerLogger, client, srvc, s, collector)
 
 	for {
 		select {
@@ -187,7 +185,7 @@ func (s Serve) Run(common *cmd.Commons) error {
 	}
 }
 
-func lixeeListener(l *zap.Logger, cl mqtt.Client, srvc chan error, s Serve, state *internal.LixeeState) chan error {
+func lixeeListener(l *zap.Logger, cl mqtt.Client, srvc chan error, s Serve, collector *internal.Collector) chan error {
 	l.Info("MQTT Client connecting")
 	if token := cl.Connect(); token.Wait() && token.Error() != nil {
 		defer close(srvc)
@@ -195,29 +193,33 @@ func lixeeListener(l *zap.Logger, cl mqtt.Client, srvc chan error, s Serve, stat
 	}
 
 	l.Info("MQTT Client subscribing...")
-	if t := cl.Subscribe(s.MQTTTopic, 0, MessageHandler(state, l, srvc)); t.Wait() && t.Error() != nil {
+	if t := cl.Subscribe(s.MQTTTopic, 0, MessageHandler(collector, l, srvc)); t.Wait() && t.Error() != nil {
 		defer close(srvc)
 		srvc <- t.Error()
 	}
 	return srvc
 }
 
-func lixeeAPIHandler(state *internal.LixeeState) func(writer http.ResponseWriter, request *http.Request) {
+func lixeeAPIHandler(collector *internal.Collector) func(writer http.ResponseWriter, request *http.Request) {
 	return func(writer http.ResponseWriter, _ *http.Request) {
-		if err := json.NewEncoder(writer).Encode(state); err != nil {
+		if err := json.NewEncoder(writer).Encode(collector.State()); err != nil {
 			fmt.Fprintf(writer, "error encoding lixee state: %v", err)
 		}
 	}
 }
 
-func MessageHandler(lixeeState *internal.LixeeState, logger *zap.Logger, srvc chan error) mqtt.MessageHandler {
+func MessageHandler(c *internal.Collector, logger *zap.Logger, srvc chan error) mqtt.MessageHandler {
 	return func(_ mqtt.Client, message mqtt.Message) {
 		logger.Debug("new message received", zap.ByteString("payload", message.Payload()))
-		err := json.Unmarshal(message.Payload(), lixeeState)
+		state := &internal.LixeeState{}
+
+		err := json.Unmarshal(message.Payload(), state)
 		if err != nil {
 			defer close(srvc)
 			srvc <- err
 		}
+
+		c.SetState(state)
 	}
 }
 
