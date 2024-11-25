@@ -1,0 +1,20 @@
+---
+# aqua - Declarative CLI Version Manager
+# https://aquaproj.github.io/
+# checksum:
+#   enabled: true
+#   require_checksum: true
+#   supported_envs:
+#   - all
+registries:
+- type: standard
+  ref: v4.219.0 # renovate: depName=aquaproj/aqua-registry
+
+packages:
+  - name: go-task/task@v3.38.0
+  - name: jqlang/jq@jq-1.7.1
+  - import: .tk/golangci/aqua.yaml
+  - import: .tk/goreleaser/aqua.yaml
+  - import: .tk/license/aqua.yaml
+  - import: .tk/trufflehog/aqua.yaml
+  

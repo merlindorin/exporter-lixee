@@ -1,0 +1,28 @@
+version: '3'
+
+vars:
+  DEFAULT_DEFAULT_PATTERN: ".*:default"
+
+tasks:
+  default:
+    summary: |
+      Run default commands in task.
+
+      The following variables are available:
+
+      | VARIABLE       | DESCRIPTION                    | DEFAULT |
+      |----------------|--------------------------------|---------|
+      | `PATTERN`      | the task name pattern to match | `{{.DEFAULT_GIT_PRE_COMMIT_PATTERN}}` |
+
+      Examples:
+        - `task` will run all default tasks if you use default as prefix
+        - `task {{.TASK}}` will explicitly run all default tasks
+      
+      Note:
+        You can add any extra to all default commands by using "--". For example `task -- -f` to force all update.
+    vars:
+      PATTERN: '{{.PATTERN | default .DEFAULT_DEFAULT_PATTERN}}'
+
+    # this one-line is pretty scary
+    cmds:
+      - cmd: task -a --json | jq -c '[ (.tasks[] | select( .name | test({{.PATTERN | quote}})) | select( .name | index({{.TASK | quote}}) | not) ) | .name] | .[]' | xargs -n 1 -L1 -I'{}' sh -c 'task {} {{.CLI_ARGS}} || exit 255'

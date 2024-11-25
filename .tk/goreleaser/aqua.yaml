@@ -1,0 +1,9 @@
+---
+# aqua - Declarative CLI Version Manager
+# https://aquaproj.github.io/
+registries:
+  - type: standard
+    ref: v4.44.3 # renovate: depName=aquaproj/aqua-registry
+
+packages:
+  - name: goreleaser/goreleaser@v2.1.0

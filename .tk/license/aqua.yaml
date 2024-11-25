@@ -1,0 +1,9 @@
+---
+# aqua - Declarative CLI Version Manager
+# https://aquaproj.github.io/
+registries:
+  - type: standard
+    ref: v4.44.3 # renovate: depName=aquaproj/aqua-registry
+
+packages:
+  - name: nishanths/license@v5.0.4

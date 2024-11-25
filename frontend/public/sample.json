@@ -1,0 +1,20 @@
+{
+  "MOTDETAT": null,
+  "active_register_tier_delivered": "TH..",
+  "apparent_power": 980,
+  "available_power": 45,
+  "current_summ_delivered": 28299,
+  "current_tarif": "BASE",
+  "linkquality": 217,
+  "meter_serial_number": "021962040656",
+  "mot_d_etat": "000000",
+  "rms_current": 4,
+  "rms_current_max": 90,
+  "update": {
+    "installed_version": 1,
+    "latest_version": 14,
+    "state": "available"
+  },
+  "update_available": null,
+  "warn_d_p_s": 0
+}

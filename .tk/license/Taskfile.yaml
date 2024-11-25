@@ -1,0 +1,53 @@
+version: '3'
+
+vars:
+  DEFAULT_LICENSE_TYPE: 'mit'
+  DEFAULT_LICENSE_FILENAME: 'LICENSE.md'
+  DEFAULT_LICENSE_NAME:
+    sh: gh api user -t '{{ "{{ .login }} <{{ .email }}>" }}'
+  DEFAULT_LICENSE_YEAR:
+    sh: date +'%Y'
+  DEFAULT_LICENSE_PROJECT:
+    sh: gh repo view --json name -t '{{ "{{ .name }}" }}'
+
+tasks:
+  default:
+    cmd:
+      task: generate
+
+  pre-commit:
+    cmd:
+      task: default
+
+  generate:
+    desc: Generate License
+    summary: |
+      Generate a standardized MIT license file for the project.
+
+      This task helps in creating a license file using relevant project details fetched from the environment when possible. It standardizes the licensing process ensuring consistency across projects.
+      
+      The following variables are available:
+
+      | VARIABLE          | DESCRIPTION                     | DEFAULT                           |
+      |-------------------|---------------------------------|-----------------------------------|
+      | `LICENSE_NAME`    | Name of the license holder      | `{{.DEFAULT_LICENSE_NAME}}`       |
+      | `LICENSE_TYPE`    | Type of the license             | `{{.DEFAULT_LICENSE_TYPE}}`       |
+      | `LICENSE_FILENAME`| Output filename for the license | `{{.DEFAULT_LICENSE_FILENAME}}`   |
+      | `LICENSE_YEAR`    | Year of the license             | `{{.DEFAULT_LICENSE_YEAR}}`       |
+      | `LICENSE_PROJECT` | Project name                    | `{{.DEFAULT_LICENSE_PROJECT}}`    |
+
+      Example usage:
+        - `task generate` generates a standard MIT license.
+        - `LICENSE_NAME='Jane Doe <jane.doe@example.com>' task generate` customizes the license holder name and email.
+    vars:
+      NAME: '{{.LICENSE_NAME | default .DEFAULT_LICENSE_NAME}}'
+      TYPE: '{{.LICENSE_TYPE | default .DEFAULT_LICENSE_TYPE}}'
+      FILENAME: '{{.LICENSE_FILENAME | default .DEFAULT_LICENSE_FILENAME}}'
+      YEAR: '{{.LICENSE_YEAR | default .DEFAULT_LICENSE_YEAR}}'
+      PROJECT: '{{.LICENSE_PROJECT | default .DEFAULT_LICENSE_PROJECT}}'
+
+    status:
+      - test -f '{{ .FILENAME }}'
+
+    cmds:
+      - aqua exec license -n "{{.NAME}}" -y "{{.YEAR}}" {{if .PROJECT }}-p "{{.PROJECT}}"{{end}} -o {{.FILENAME}} {{.TYPE}}
