@@ -3,7 +3,6 @@ debug: false
 mqtt:
   host:
   topic: zigbee2mqtt/LiXee
-  clientid: exporter-lixee
 
 # Default values for exporter-lixee.
 # This is a YAML-formatted file.

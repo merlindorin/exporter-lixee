@@ -45,10 +45,10 @@ spec:
             - name: MQTT_TOPIC
               value: {{ .Values.mqtt.topic | quote }}
             {{- end }}
-            {{- if .Values.mqtt.clientid }}
             - name: MQTT_CLIENT_ID
-              value: {{ .Values.mqtt.clientid | quote }}
-            {{- end }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: DEBUG
               value: {{ .Values.debug | quote }}
           ports:
