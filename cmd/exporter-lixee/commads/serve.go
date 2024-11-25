@@ -104,8 +104,8 @@ func (s Serve) Run(common *cmd.Commons) error {
 	reg := prometheus.NewRegistry()
 	logger.Debug("Registering Lixee collector", zap.Duration("timeout", s.Timeout))
 
-	c := internal.NewCollector(s.Timeout, true)
-	reg.MustRegister(c)
+	collector := internal.NewCollector(s.Timeout, true)
+	reg.MustRegister(collector)
 
 	logger.Debug("Registering common build info collector")
 	reg.MustRegister(buildinfo.NewCollector(common.Version.BuildInfo))
@@ -124,8 +124,6 @@ func (s Serve) Run(common *cmd.Commons) error {
 		)
 	}
 
-	// Match Prometheus behavior and redirect over externalURL for root path only
-	// if routePrefix is different than "/"
 	if s.prefixRoute() != "/" {
 		http.HandleFunc("/", redirectOverExternalURL(s))
 	}
@@ -164,23 +162,19 @@ func (s Serve) Run(common *cmd.Commons) error {
 	}()
 
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker(s.MQTTHost.String()).SetClientID(s.MQTTClientID)
+	opts.AddBroker(s.MQTTHost.String())
+	opts.SetClientID(s.MQTTClientID)
 
 	client := mqtt.NewClient(opts)
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		defer close(srvc)
-		srvc <- token.Error()
-	}
-
 	defer client.Disconnect(s.MQTTGracefulPeriod)
 	defer client.Unsubscribe(s.MQTTTopic)
 
-	go func() {
-		if t := client.Subscribe(s.MQTTTopic, 0, MessageHandler(lixeeState, srvc, c)); t.Wait() && t.Error() != nil {
-			defer close(srvc)
-			srvc <- t.Error()
-		}
-	}()
+	listenerLogger := logger.With(
+		zap.String("host", s.MQTTHost.String()),
+		zap.String("clientId", s.MQTTClientID),
+		zap.String("topic", s.MQTTTopic),
+	)
+	go lixeeListener(listenerLogger, client, srvc, s, lixeeState)
 
 	for {
 		select {
@@ -193,26 +187,37 @@ func (s Serve) Run(common *cmd.Commons) error {
 	}
 }
 
-func lixeeAPIHandler(lixeeState *internal.LixeeState) func(writer http.ResponseWriter, request *http.Request) {
+func lixeeListener(l *zap.Logger, cl mqtt.Client, srvc chan error, s Serve, state *internal.LixeeState) chan error {
+	l.Info("MQTT Client connecting")
+	if token := cl.Connect(); token.Wait() && token.Error() != nil {
+		defer close(srvc)
+		srvc <- token.Error()
+	}
+
+	l.Info("MQTT Client subscribing...")
+	if t := cl.Subscribe(s.MQTTTopic, 0, MessageHandler(state, l, srvc)); t.Wait() && t.Error() != nil {
+		defer close(srvc)
+		srvc <- t.Error()
+	}
+	return srvc
+}
+
+func lixeeAPIHandler(state *internal.LixeeState) func(writer http.ResponseWriter, request *http.Request) {
 	return func(writer http.ResponseWriter, _ *http.Request) {
-		if err := json.NewEncoder(writer).Encode(lixeeState); err != nil {
+		if err := json.NewEncoder(writer).Encode(state); err != nil {
 			fmt.Fprintf(writer, "error encoding lixee state: %v", err)
 		}
 	}
 }
 
-func MessageHandler(
-	lixeeState *internal.LixeeState,
-	srvc chan error,
-	c *internal.Collector,
-) mqtt.MessageHandler {
+func MessageHandler(lixeeState *internal.LixeeState, logger *zap.Logger, srvc chan error) mqtt.MessageHandler {
 	return func(_ mqtt.Client, message mqtt.Message) {
+		logger.Debug("new message received", zap.ByteString("payload", message.Payload()))
 		err := json.Unmarshal(message.Payload(), lixeeState)
 		if err != nil {
 			defer close(srvc)
 			srvc <- err
 		}
-		c.UpdateState(lixeeState)
 	}
 }
 

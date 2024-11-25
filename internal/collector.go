@@ -2,14 +2,12 @@
 package internal
 
 import (
-	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Collector struct {
-	mutex        sync.Mutex
 	state        *LixeeState
 	timeout      time.Duration
 	reportErrors bool
@@ -26,12 +24,6 @@ type Collector struct {
 	rmsCurrentGauge           *prometheus.Desc
 	rmsCurrentMaxGauge        *prometheus.Desc
 	warnDPSGauge              *prometheus.Desc
-}
-
-func (c *Collector) UpdateState(state *LixeeState) {
-	c.mutex.Lock()
-	c.state = state
-	c.mutex.Unlock()
 }
 
 func NewCollector(timeout time.Duration, reportError bool) *Collector {

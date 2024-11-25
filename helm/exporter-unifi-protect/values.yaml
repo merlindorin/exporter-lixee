@@ -1,0 +1,182 @@
+debug: false
+
+mqtt:
+  host:
+  topic: zigbee2mqtt/LiXee
+  clientid: exporter-lixee
+
+# Default values for exporter-lixee.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/merlindorin/exporter-lixee
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 9090
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+metrics:
+  # -- enable the Prometheus
+  enabled: false
+  prometheusRule:
+    # -- Create a PrometheusRule for Prometheus Operator
+    enabled: false
+    # -- Additional labels that can be used so PrometheusRule will be discovered by Prometheus
+    additionalLabels: {}
+    # -- Namespace for the PrometheusRule Resource (defaults to the Release Namespace)
+    namespace: ""
+    # -- PrometheusRule definitions
+    rules: []
+      # - alert: PrometheusConfigReloadFailed
+      #   annotations:
+      #     description: Reloading Prometheus' configuration has failed for {{`{{`}}$labels.namespace{{`}}`}}/{{`{{`}}$labels.pod{{`}}`}}
+      #     summary: Reloading Prometheus' configuration failed
+      #   expr: prometheus_config_last_reload_successful{job="{{ $prometheusJob }}",namespace="{{ $namespace }}"} == 0
+      #   for: 10m
+      #   labels:
+    #     severity: warning
+  service:
+    # -- Annotations for Prometheus to auto-discover the metrics endpoint
+    # @default -- see [values.yaml](./values.yaml)
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "{{ .Values.metrics.service.port }}"
+    # -- Prometheus Exporter service port
+    port: 9090
+    # -- Control where client requests go, to the same pod or round-robin. Values: ClientIP or None
+    sessionAffinity: None
+  serviceMonitor:
+    # -- Create ServiceMonitor Resource for scraping metrics using Prometheus Operator
+    enabled: true
+    # -- Additional labels that can be used so ServiceMonitor will be discovered by Prometheus
+    additionalLabels: {}
+    # -- Specify honorLabels parameter to add the scrape endpoint
+    honorLabels: false
+    # -- Interval at which metrics should be scraped.
+    interval: "30s"
+    # -- The name of the label on the target service to use as the job name in Prometheus
+    jobLabel: ""
+    # -- MetricRelabelConfigs to apply to samples before ingestion
+    metricRelabelings: {}
+    # -- Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)
+    namespace: ""
+    # -- The path used by Prometheus to scrape metrics
+    path: "/metrics"
+    # -- RelabelConfigs to apply to samples before scraping
+    relabelings: {}
+    # -- Timeout after which the scrape is ended
+    scrapeTimeout: ""
+    # -- Prometheus instance selector labels
+    selector: {}
+  podMonitor:
+    # -- Create PodMonitor Resource for scraping metrics using Prometheus Operator
+    enabled: false
+    # -- Additional labels that can be used so ServiceMonitor will be discovered by Prometheus
+    additionalLabels: {}
+    # -- Specify honorLabels parameter to add the scrape endpoint
+    honorLabels: false
+    # -- Interval at which metrics should be scraped.
+    interval: "30s"
+    # -- The name of the label on the target service to use as the job name in Prometheus
+    jobLabel: ""
+    # -- MetricRelabelConfigs to apply to samples before ingestion
+    metricRelabelings: {}
+    # -- Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)
+    namespace: ""
+    # -- The path used by Prometheus to scrape metrics
+    path: "/metrics"
+    # -- RelabelConfigs to apply to samples before scraping
+    relabelings: {}
+    # -- Timeout after which the scrape is ended
+    scrapeTimeout: ""
+    # -- Prometheus instance selector labels
+    selector: {}
