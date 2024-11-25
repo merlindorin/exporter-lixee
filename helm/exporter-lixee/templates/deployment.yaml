@@ -46,7 +46,7 @@ spec:
               value: {{ .Values.mqtt.topic | quote }}
             {{- end }}
             {{- if .Values.mqtt.clientid }}
-            - name: MQTT_TOPIC
+            - name: MQTT_CLIENT_ID
               value: {{ .Values.mqtt.clientid | quote }}
             {{- end }}
             - name: DEBUG
